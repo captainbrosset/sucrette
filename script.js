@@ -17,6 +17,7 @@ class Sucrette extends React.Component {
 
     this.handleRemovedFood = this.handleRemovedFood.bind(this);
     this.handleNewFood = this.handleNewFood.bind(this);
+    this.handleClearAll = this.handleClearAll.bind(this);
 
     this.state = props;
   }
@@ -36,9 +37,15 @@ class Sucrette extends React.Component {
     }
   }
 
+  handleClearAll() {
+    this.setState({
+      foods: []
+    });
+  }
+
   render() {
     return DOM.div({ className: "app-wrapper" },
-      React.createElement(Total, { foods: this.state.foods }),
+      React.createElement(Total, { foods: this.state.foods, clearAll: this.handleClearAll }),
       React.createElement(AddFoodForm, {
         addFood: this.handleNewFood
       }),
@@ -56,7 +63,10 @@ class Total extends React.Component {
       return food.quantity * food.ref.carbs / food.ref.quantity;
     }).reduce((current, previous) => current + previous, 0);
 
-    return DOM.div({ className: "total-carbs" }, formatQuantity(total, CARB_UNIT));
+    return DOM.div({ className: "total-carbs" },
+      formatQuantity(total, CARB_UNIT),
+      React.createElement(DeleteButton, { delete: this.props.clearAll })
+    );
   }
 }
 
@@ -92,7 +102,11 @@ class AddFoodForm extends React.Component {
   }
 
   handleQtyChange(e) {
-    this.setState({ quantity: parseFloat(e.target.value) });
+    if (e.target.value) {
+      this.setState({ quantity: parseFloat(e.target.value) });
+    } else {
+      this.setState({ quantity: null });
+    }
   }
 
   handleSubmit(e) {
@@ -146,18 +160,51 @@ class FoodItem extends React.Component {
     let {quantity, ref} = this.props.food;
     let total = quantity * ref.carbs / ref.quantity;
 
-    return DOM.li({ className: "foods" },
-      DOM.span({ className: "qty" }, formatQuantity(quantity, ref.unit)),
-      DOM.span({ className: "title" }, ref.unit === "unit" ? ref.title : `de ${ref.title}`),
+    return DOM.li({ className: "food" },
+      DOM.span({ className: "title" }, ref.title),
+      DOM.span({ className: "qty" }, "(" + formatQuantity(quantity, ref.unit) + ")"),
       DOM.span({ className: "carbs" }, formatQuantity(total, CARB_UNIT)),
-      DOM.form({className: "delete", onSubmit: this.props.deleteFood },
-        DOM.button({ type: "submit" })
-      )
+      React.createElement(DeleteButton, { delete: this.props.deleteFood })
+    );
+  }
+}
+
+class DeleteButton extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleSubmit(e) {
+    e.preventDefault();
+    this.props.delete();
+  }
+
+  render() {
+    return DOM.form({className: "delete-button", onSubmit: this.handleSubmit },
+      DOM.button({ type: "submit" })
     );
   }
 }
 
 const STORE = {
-  foods: []
+  foods: [{
+    quantity: 2,
+    ref: {
+      title: "farine de blé",
+      quantity: 1,
+      unit: "cups",
+      carbs: 56
+    }
+  }, {
+    quantity: 25,
+    ref: {
+      title: "sucre roux",
+      quantity: 100,
+      unit: "g",
+      carbs: 75
+    }
+  }]
 };
 ReactDOM.render(React.createElement(Sucrette, STORE), document.querySelector("#app"));
